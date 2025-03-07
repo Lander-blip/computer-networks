@@ -1,0 +1,36 @@
+From: test@test.com
+To: lander@email.com
+Subject: Test mail
+Received: 00:00:00
+Hello this is a test mail.
+
+
+From: test@test.com
+To: lander@email.com
+Subject: Test mail
+Received: 00:00:00
+Hello this is a test mail.
+
+
+From: test@test.com
+To: lander@email.com
+Subject: Test mail
+Received: 2025-03-07 : 15 : 11
+Hello this is a test mail.
+
+
+From: test@test.com
+To: lander@email.com
+Subject: Test mail
+Received: 2025-03-07 : 15 : 31
+Hello this is a test mail.
+
+
+From: test@test.com
+To: lander@email.com
+Subject: Test mail
+Received: 2025-03-07 : 15 : 42
+Hello this is a test mail.
+RSET
+
+

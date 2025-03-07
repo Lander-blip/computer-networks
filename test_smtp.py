@@ -1,9 +1,10 @@
 import socket
+import datetime
 
 def connect_and_send_messages():
     # Setup connection details
     host = 'localhost'
-    port = 2000
+    port = 2004
     
     # Create a socket object
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
@@ -19,8 +20,9 @@ def connect_and_send_messages():
             "From: test@test.com\n",
             "To: lander@email.com\n",
             "Subject: Test mail\n",
-            "Received: 00:00:00\n",
+            f"Received: {datetime.datetime.now().strftime('%Y-%m-%d : %H : %M')}\n",
             "Hello this is a test mail.\n",
+            "RSET\n",
             "\n.\n",
         ]
         
