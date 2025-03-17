@@ -1,23 +1,8 @@
 From: test@test.com
 To: lander@email.com
 Subject: Test mail
-Received: 00:00:00
-Hello this is a test mail.
-
-
-From: test@test.com
-To: lander@email.com
-Subject: Test mail
-Received: 00:00:00
-Hello this is a test mail.
-
-
-From: test@test.com
-To: lander@email.com
-Subject: Test mail
 Received: 2025-03-07 : 15 : 11
 Hello this is a test mail.
-
 
 From: test@test.com
 To: lander@email.com
@@ -25,25 +10,10 @@ Subject: Test mail
 Received: 2025-03-07 : 15 : 31
 Hello this is a test mail.
 
-
 From: test@test.com
 To: lander@email.com
 Subject: Test mail
 Received: 2025-03-07 : 15 : 42
 Hello this is a test mail.
 RSET
-
-
-From: test@test.com
-To: lander@email.com
-korte mail
-Een hele korte mail.
-Supper kot
-
-From: lander@ggg
-To: lander@email.com
-Subject: hele korte mail (nu echt)
-jgjfjajzfbdgh
-sfhsdfhsdfsdf
-g.
 

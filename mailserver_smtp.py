@@ -78,7 +78,7 @@ def writeMailOnDisk(mail):
 
 def handleCommand(connection, data): #returns False when connection needs to be closed
     global receivingMail
-    cmd = data.replace('\n', "")
+    cmd = data.replace('\n', "").replace("\r", "")
     if (cmd == "HELO"):
         print("Sending HELO back")
         send(connection, "250 OK")

@@ -5,11 +5,10 @@ import os
 # ---------------------------
 # Mailbox Handling (using blank lines as delimiters)
 # ---------------------------
-
 def load_mailbox(username):
     """
     Load messages for the user from 'username/my_mailbox'.
-    Each message is separated by an empty line.
+    Messages are separated by one or more empty lines.
     Returns a list of message strings.
     """
     mailbox_file = os.path.join(username, "my_mailbox")
@@ -20,10 +19,9 @@ def load_mailbox(username):
     with open(mailbox_file, "r") as f:
         current_message = []
         for line in f:
-            # If the line is empty (or only whitespace), consider it as a delimiter.
+            # An empty (or whitespace-only) line is treated as a delimiter.
             if line.strip() == "":
                 if current_message:
-                    # Join collected lines and append as a message.
                     messages.append("".join(current_message).strip())
                     current_message = []
             else:
@@ -34,21 +32,21 @@ def load_mailbox(username):
 
 def save_mailbox(username, messages):
     """
-    Save the given list of message strings into 'username/my_mailbox',
-    using an empty line as a delimiter between messages.
+    Save the list of message strings into 'username/my_mailbox',
+    separating each message with an empty line.
     """
     mailbox_file = os.path.join(username, "my_mailbox")
     with open(mailbox_file, "w") as f:
         for msg in messages:
-            f.write(msg.strip() + "\n\n")  # Two newlines to separate messages
+            f.write(msg.strip() + "\n\n")  # Two newlines as separator
 
 # ---------------------------
 # User Data Handling
 # ---------------------------
-
 def load_user_data():
     """
     Load user credentials from userinfo.txt.
+    Each line is in the format: <username> <password>
     Returns a dictionary mapping username to password.
     """
     users = {}
@@ -64,61 +62,79 @@ def load_user_data():
     return users
 
 # ---------------------------
+# Helper to Parse Message Fields
+# ---------------------------
+def parse_mail_fields(msg):
+    """
+    Parse the email message and extract the sender, received time, and subject.
+    Expected lines:
+      From: <sender>
+      Received: <date : hour : minute>
+      Subject: <subject>
+    """
+    sender = ""
+    received = ""
+    subject = ""
+    for line in msg.splitlines():
+        if line.startswith("From:"):
+            sender = line[len("From:"):].strip()
+        elif line.startswith("Received:"):
+            received = line[len("Received:"):].strip()
+        elif line.startswith("Subject:"):
+            subject = line[len("Subject:"):].strip()
+    return sender, received, subject
+
+# ---------------------------
 # POP3 Command Handlers
 # ---------------------------
-
 def handle_stat(mailbox, deletion_marks):
     """
-    Returns the STAT response with number of messages and total size (in octets)
-    of messages not marked for deletion.
+    Return the STAT response with the number of messages (not marked for deletion)
+    and total size in octets.
     """
-    num = 0
-    total_size = 0
-    for i, msg in enumerate(mailbox):
-        if not deletion_marks[i]:
-            num += 1
-            total_size += len(msg.encode())
+    num = sum(1 for mark in deletion_marks if not mark)
+    total_size = sum(len(msg.encode()) for i, msg in enumerate(mailbox) if not deletion_marks[i])
     return f"+OK {num} {total_size}\r\n"
 
 def handle_list(mailbox, deletion_marks):
     """
-    Returns the LIST response for each message that is not marked deleted.
-    Message numbering is 1-indexed.
+    Build the LIST response displaying messages in the format:
+    No. <Sender’s email id> <When received, in date : hour : minute> <Subject>
+    Only messages not marked for deletion are listed.
+    The response is terminated with a line containing only a dot.
     """
     lines = []
-    count = 0
     for i, msg in enumerate(mailbox):
         if not deletion_marks[i]:
-            count += 1
-            size = len(msg.encode())
-            lines.append(f"{i+1} {size}")
-    response = f"+OK {count} messages\r\n" + "\r\n".join(lines) + "\r\n"
+            sender, received, subject = parse_mail_fields(msg)
+            lines.append(f"{i+1}. {sender} {received} {subject}")
+    response = f"+OK {len(lines)} messages\r\n" + "\r\n".join(lines) + "\r\n.\r\n"
     return response
 
 def handle_retr(mailbox, deletion_marks, msg_num):
     """
-    Returns the full message identified by msg_num (1-indexed), if it exists and is not deleted.
+    Return the full text of the message identified by the given 1-indexed message number,
+    if it exists and is not marked for deletion.
     """
     index = msg_num - 1
     if index < 0 or index >= len(mailbox) or deletion_marks[index]:
         return "-ERR no such message\r\n"
     msg = mailbox[index]
-    # Terminate the message with a line containing only a dot.
     return f"+OK message follows\r\n{msg}\r\n.\r\n"
 
-def handle_dele(deletion_marks, msg_num, mailbox):
+def handle_dele(deletion_marks, msg_num):
     """
-    Marks the given message (1-indexed) for deletion.
+    Mark the given 1-indexed message for deletion.
     """
     index = msg_num - 1
-    if index < 0 or index >= len(mailbox) or deletion_marks[index]:
+    if index < 0 or index >= len(deletion_marks) or deletion_marks[index]:
         return "-ERR no such message\r\n"
     deletion_marks[index] = True
     return f"+OK message {msg_num} marked for deletion\r\n"
 
 def handle_rset(deletion_marks):
     """
-    Resets (unmarks) all deletion marks.
+    Reset (unmark) all deletion marks.
     """
     for i in range(len(deletion_marks)):
         deletion_marks[i] = False
@@ -127,11 +143,10 @@ def handle_rset(deletion_marks):
 # ---------------------------
 # Main POP3 Server Functionality
 # ---------------------------
-
 def handle_client(connection, client_address, users):
     print(f"Connection from {client_address} established.")
     try:
-        # Send initial greeting
+        # Send initial greeting.
         connection.sendall(b"+OK POP3 server ready\r\n")
         authenticated = False
         current_user = None
@@ -142,15 +157,18 @@ def handle_client(connection, client_address, users):
             data = connection.recv(1024).decode()
             if not data:
                 break
-            print("Received command:", data.strip())
-            parts = data.strip().split()
+            # Filter out all \r and \n characters
+            data = data.replace('\r', '').replace('\n', '')
+            print("Received command:", repr(data))
+            parts = data.split()
             if not parts:
                 connection.sendall(b"-ERR empty command\r\n")
                 continue
+
             command = parts[0].upper()
             args = parts[1:]
 
-            # Authentication phase
+            # --- Authentication Phase ---
             if not authenticated:
                 if command == "USER" and args:
                     current_user = args[0]
@@ -161,17 +179,19 @@ def handle_client(connection, client_address, users):
                         authenticated = True
                         mailbox = load_mailbox(current_user)
                         deletion_marks = [False] * len(mailbox)
-                        connection.sendall(b"+OK Mailbox open, start your session\r\n")
+                        print("Authentication successful")
+                        connection.sendall(b"+OK POP3 server is ready\r\n")
                     else:
                         connection.sendall(b"-ERR Invalid password\r\n")
                 else:
                     connection.sendall(b"-ERR Authentication required\r\n")
+            # --- Authenticated Commands ---
             else:
-                # Authenticated commands
                 if command == "STAT":
                     response = handle_stat(mailbox, deletion_marks)
                     connection.sendall(response.encode())
                 elif command == "LIST":
+                    print("LIST COMMAND")
                     response = handle_list(mailbox, deletion_marks)
                     connection.sendall(response.encode())
                 elif command == "RETR":
@@ -188,7 +208,7 @@ def handle_client(connection, client_address, users):
                     if args:
                         try:
                             msg_num = int(args[0])
-                            response = handle_dele(deletion_marks, msg_num, mailbox)
+                            response = handle_dele(deletion_marks, msg_num)
                             connection.sendall(response.encode())
                         except ValueError:
                             connection.sendall(b"-ERR Invalid message number\r\n")
@@ -198,10 +218,13 @@ def handle_client(connection, client_address, users):
                     response = handle_rset(deletion_marks)
                     connection.sendall(response.encode())
                 elif command == "QUIT":
-                    # On QUIT, remove messages marked for deletion and save mailbox
+                    # On QUIT, delete messages marked for deletion from mailbox and update disk.
                     new_mailbox = [msg for i, msg in enumerate(mailbox) if not deletion_marks[i]]
-                    save_mailbox(current_user, new_mailbox)
-                    connection.sendall(b"+OK POP3 server signing off\r\n")
+                    try:
+                        save_mailbox(current_user, new_mailbox)
+                        connection.sendall(b"+OK POP3 server signing off\r\n")
+                    except Exception as e:
+                        connection.sendall(f"-ERR {str(e)}\r\n".encode())
                     break
                 else:
                     connection.sendall(b"-ERR Command not recognized\r\n")
