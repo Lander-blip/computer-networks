@@ -84,8 +84,8 @@ def handleCommand(connection, data): #returns False when connection needs to be 
         send(connection, "250 OK")
         return True
 
-    if ("MAIL FROM:" in cmd):
-        mail = cmd[len("MAIL FROM:"):]
+    if ("MAIL FROM: <" in cmd):
+        mail = cmd[len("MAIL FROM: <"):-1] #filter out
         if("@" in mail): #correct email
             send(connection, "250 OK")
             receivingMail = Mail(mail)
@@ -124,8 +124,8 @@ def handleCommand(connection, data): #returns False when connection needs to be 
         send(connection, "500 unknown command")
         return True
 
-    if("RCPT TO:" in cmd):
-        mail = cmd[len("RCPT TO:"):]
+    if("RCPT TO: <" in cmd):
+        mail = cmd[len("RCPT TO: <"):-1] #filter out last >
         if mail in [user[1] for user in users]:
             receivingMail.addRcpt(mail)
             send(connection, "250 OK")
@@ -167,13 +167,14 @@ def main():
     server_socket.bind(server_address)
 
     # Listen for incoming connections (server mode)
-    server_socket.listen(5)
+    server_socket.listen(1)
     print("Waiting for a connection...")
 
     try:
         # Wait for a connection
         connection, client_address = server_socket.accept()
         print(f"Connection from {client_address} has been established.")
+        connection.sendall("HELLO WORLD".encode())
         
         # The following loop will echo back any received data to the client
         run = True

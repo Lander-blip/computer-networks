@@ -70,6 +70,11 @@ def sendMail(conn):
             print("MAIL FULLY RECEIVED")
             run = False
 
+        if not response:
+            print("CONNECTION CLOSED")
+            conn.close()
+            run = False
+
 def menu(conn):
     run = True
     while run:
@@ -85,8 +90,19 @@ def menu(conn):
             print("SENDING MAIL")
             print("-------------------------------")
             sendMail(conn)
-        elif option > 1:
-            print("NOT IMPLEMENTED YET!")
+        elif option == 2:
+            print("MAIL MANAGMENT")
+            print("-------------------------------")
+        elif option == 3:
+            print("MAIL SEARCHING")
+            print("-------------------------------")
+        elif option == 4:
+            print("EXIT")
+            conn.close()
+            exit()
+        else:
+            print("Implementation error in menu")
+            exit()
 
 
 

@@ -1,181 +1,116 @@
 import socket
 import getpass
 
-# SMTP & POP3 Server Configuration
-SMTP_PORT = 1025  # Change as needed
-POP3_PORT = 1100  # Change as needed
-
 class MailClient:
     def __init__(self, server_ip):
         self.server_ip = server_ip
-        self.username = None
-        self.password = None
-
-    def start(self):
-        """Start the client interface."""
-        print("Welcome to the Mail Client!")
-        self.authenticate()
-        while True:
-            print("\nOptions:")
-            print("1) Send Email")
-            print("2) Manage Emails (View & Delete)")
-            print("3) Search Emails")
-            print("4) Exit")
-            choice = input("Select an option: ")
-
-            if choice == "1":
-                self.send_email()
-            elif choice == "2":
-                self.manage_emails()
-            elif choice == "3":
-                self.search_emails()
-            elif choice == "4":
-                print("Exiting Mail Client. Goodbye!")
-                break
-            else:
-                print("Invalid choice. Please try again.")
-
-    def authenticate(self):
-        """Authenticate user with username and password."""
-        print("\n--- User Authentication ---")
+        self.smtp_socket = None
+        self.pop3_socket = None
+        self.SMTP_PORT = 2000  # Updated to the specified SMTP port
+        self.POP3_PORT = 3000  # Updated to the specified POP3 port
         self.username = input("Enter your username: ")
         self.password = getpass.getpass("Enter your password: ")
-        if not self.validate_login():
-            print("Authentication failed. Exiting.")
-            exit()
+        self.connect()
 
-    def validate_login(self):
-        """Validate user credentials via POP3 authentication."""
-        try:
-            pop_conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            pop_conn.connect((self.server_ip, POP3_PORT))
-            pop_conn.recv(1024)  # Receive greeting
-            pop_conn.sendall(f"USER {self.username}\r\n".encode())
-            response = pop_conn.recv(1024).decode()
-            if "+OK" not in response:
-                return False
-            pop_conn.sendall(f"PASS {self.password}\r\n".encode())
-            response = pop_conn.recv(1024).decode()
-            if "+OK" not in response:
-                return False
-            pop_conn.sendall("QUIT\r\n".encode())
-            pop_conn.close()
-            return True
-        except Exception as e:
-            print(f"Error during authentication: {e}")
-            return False
+    def connect(self):
+        self.smtp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.smtp_socket.connect((self.server_ip, self.SMTP_PORT))
 
     def send_email(self):
-        """Send an email using SMTP."""
-        print("\n--- Sending Email ---")
-        sender = f"{self.username}@mailserver.com"
-        receiver = input("To: ")
-        subject = input("Subject: ")
-        print("Enter message body (end with a single '.' on a new line):")
-        body = []
-        while True:
-            line = input()
-            if line == ".":
-                break
-            body.append(line)
-        message = f"From: {sender}\r\nTo: {receiver}\r\nSubject: {subject}\r\n\r\n" + "\n".join(body) + "\r\n."
+        self._receiveSMTP()  # Server greeting
 
-        try:
-            smtp_conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            smtp_conn.connect((self.server_ip, SMTP_PORT))
-            smtp_conn.recv(1024)  # Receive greeting
-            smtp_conn.sendall(f"HELO {self.server_ip}\r\n".encode())
-            smtp_conn.recv(1024)
-            smtp_conn.sendall(f"MAIL FROM: <{sender}>\r\n".encode())
-            smtp_conn.recv(1024)
-            smtp_conn.sendall(f"RCPT TO: <{receiver}>\r\n".encode())
-            smtp_conn.recv(1024)
-            smtp_conn.sendall("DATA\r\n".encode())
-            smtp_conn.recv(1024)
-            smtp_conn.sendall(message.encode() + b"\r\n.\r\n")
-            response = smtp_conn.recv(1024).decode()
-            if "250 OK" in response:
-                print("Mail sent successfully!")
-            else:
-                print("Failed to send mail.")
-            smtp_conn.sendall("QUIT\r\n".encode())
-            smtp_conn.close()
-        except Exception as e:
-            print(f"Error while sending email: {e}")
+        # Send HELO command
+        self._sendSMTP("HELO\n")
+        self._receiveSMTP()
+
+        # Send MAIL FROM command
+        mail_from = input("From: ")
+        self._sendSMTP(f"MAIL FROM: <{mail_from}>\n")
+        self._receiveSMTP()
+
+        # Send RCPT TO command
+        response = "550"
+        while "550" in response:
+            to_address = input("To : ")
+            self._sendSMTP(f"RCPT TO: <{to_address}>\n")
+            response = self._receiveSMTP()
+
+        # Send DATA command
+        self._sendSMTP("DATA\n")
+        self._receiveSMTP()
+
+        # Send email data
+        subject = "Subject: " + input("Subject: ") + '\n'
+        self._sendSMTP(subject)
+        print("Enter message body, end with a line containing only '.':")
+        while True:
+            line = input() + '\n'
+            self._sendSMTP(line)
+            if line == ".\n":
+                print("EMAIL COMPLETE")
+                break;
+
+
 
     def manage_emails(self):
-        """View and delete emails using the POP3 server."""
-        print("\n--- Managing Emails ---")
-        try:
-            pop_conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            pop_conn.connect((self.server_ip, POP3_PORT))
-            pop_conn.recv(1024)  # Receive greeting
-            pop_conn.sendall(f"USER {self.username}\r\n".encode())
-            pop_conn.recv(1024)
-            pop_conn.sendall(f"PASS {self.password}\r\n".encode())
-            pop_conn.recv(1024)
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as pop3_socket:
+            pop3_socket.connect((self.server_ip, self.POP3_PORT))
+            self._receive()  # Server greeting
 
-            pop_conn.sendall("LIST\r\n".encode())
-            response = pop_conn.recv(4096).decode()
-            print("\nEmails:\n", response)
+            # Authentication
+            self._send(f"USER {self.username}\r\n")
+            self._receive()
+            self._send(f"PASS {self.password}\r\n")
+            response = self._receive()
+            if "+OK" not in response:
+                print("Authentication failed.")
+                return
 
-            while True:
-                delete_choice = input("Enter email number to delete (or 'q' to quit): ")
-                if delete_choice.lower() == "q":
-                    break
-                pop_conn.sendall(f"DELE {delete_choice}\r\n".encode())
-                print(pop_conn.recv(1024).decode())
+            # List emails
+            self._send("LIST\r\n")
+            response = self._receive()
+            print("Email List:\n", response)
 
-            pop_conn.sendall("QUIT\r\n".encode())
-            pop_conn.close()
-        except Exception as e:
-            print(f"Error managing emails: {e}")
+            # Delete an email (optional)
+            email_number = input("Enter email number to delete or 'exit' to stop: ")
+            if email_number.lower() != 'exit':
+                self._send(f"DELE {email_number}\r\n")
+                self._receive()
+
+            self._send("QUIT\r\n")
+            self._receive()
 
     def search_emails(self):
-        """Search emails by keyword, time, or sender address."""
-        print("\n--- Search Emails ---")
-        print("1) Search by Keyword")
-        print("2) Search by Date (MM/DD/YY)")
-        print("3) Search by Sender Address")
-        choice = input("Select search type: ")
+        # This method should ideally interact with a search functionality on the server side,
+        # which needs to be implemented separately in the POP3 server.
+        print("Search functionality needs to be implemented on the server.")
 
-        search_term = input("Enter search term: ")
+    def _sendSMTP(self, message):
+        #print("C: ", message.strip())
+        self.smtp_socket.sendall(message.encode())
 
-        try:
-            pop_conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            pop_conn.connect((self.server_ip, POP3_PORT))
-            pop_conn.recv(1024)
-            pop_conn.sendall(f"USER {self.username}\r\n".encode())
-            pop_conn.recv(1024)
-            pop_conn.sendall(f"PASS {self.password}\r\n".encode())
-            pop_conn.recv(1024)
+    def _receiveSMTP(self):
+        response = self.smtp_socket.recv(1024).decode()
+        #print("S: ", response.strip())
+        return response
 
-            pop_conn.sendall("LIST\r\n".encode())
-            response = pop_conn.recv(4096).decode()
-
-            emails = response.split("\n")[1:-2]  # Ignore first and last response line
-            matching_emails = []
-
-            for email_info in emails:
-                email_num = email_info.split()[0]
-                pop_conn.sendall(f"RETR {email_num}\r\n".encode())
-                email_content = pop_conn.recv(4096).decode()
-                if search_term in email_content:
-                    matching_emails.append(email_content)
-
-            if matching_emails:
-                print("\nMatching Emails:\n")
-                for email in matching_emails:
-                    print(email, "\n" + "-" * 50)
+    def start(self):
+        while True:
+            print("\n1. Send Email\n2. Manage Emails\n3. Search Emails\n4. Exit")
+            choice = input("Choose an option: ")
+            if choice == '1':
+                self.send_email()
+            elif choice == '2':
+                self.manage_emails()
+            elif choice == '3':
+                self.search_emails()
+            elif choice == '4':
+                print("Exiting.")
+                break
             else:
-                print("No matching emails found.")
-
-            pop_conn.sendall("QUIT\r\n".encode())
-            pop_conn.close()
-        except Exception as e:
-            print(f"Error while searching emails: {e}")
+                print("Invalid choice.")
 
 if __name__ == "__main__":
-    server_ip = input("Enter the MailServer IP address: ")
+    server_ip = input("Enter server IP address: ")
     client = MailClient(server_ip)
     client.start()
