@@ -41,6 +41,7 @@ class MailClient:
 
         # Send email data
         subject = "Subject: " + input("Subject: ") + '\n'
+        #SEND TIMESTAMP TO SERVER
         self._sendSMTP(subject)
         print("Enter message body, end with a line containing only '.':")
         while True:
