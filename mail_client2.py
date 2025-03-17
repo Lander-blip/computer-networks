@@ -1,5 +1,7 @@
 import socket
 import getpass
+import datetime
+
 
 class MailClient:
     def __init__(self, server_ip):
@@ -39,10 +41,14 @@ class MailClient:
         self._sendSMTP("DATA\n")
         self._receiveSMTP()
 
+
         # Send email data
         subject = "Subject: " + input("Subject: ") + '\n'
         #SEND TIMESTAMP TO SERVER
         self._sendSMTP(subject)
+        # timestamp 
+        timestamp = datetime.datetime.now().strftime("%d %b %Y : %H : %M")
+        self._sendSMTP(f"Received: {timestamp}\n")
         print("Enter message body, end with a line containing only '.':")
         while True:
             line = input() + '\n'
