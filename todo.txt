@@ -1,0 +1,6 @@
+- add timestamp when sending a mail via mail_client2.py
+- make smtpserver and popserver multithreaded
+- delete of popserver does not delete on disk
+- add mailsearching as option
+- make everything more readable and write documentation
+- add an argparsed to mail_client2.py, so the program doesn't need to ask for the ip adress.
