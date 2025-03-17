@@ -82,19 +82,23 @@ def handleCommand(connection, data): #returns False when connection needs to be 
     if (cmd == "HELO"):
         print("Sending HELO back")
         send(connection, "250 OK")
+        return True
 
     if ("MAIL FROM:" in cmd):
         mail = cmd[len("MAIL FROM:"):]
         if("@" in mail): #correct email
             send(connection, "250 OK")
             receivingMail = Mail(mail)
+            return True
         else:
             send(connection, "501, incorrect mailadress")
+            return True
 
     if (cmd == "RSET"):
         print("resetting current received mail")
         send(connection, "200 Mail resetted")
         receivingMail = None
+        return True
 
     if (cmd == "QUIT"):
         print("Quiting... ")
@@ -110,12 +114,14 @@ def handleCommand(connection, data): #returns False when connection needs to be 
                 send(connection, f"250 {name} {mail}")
                 return True
         send(connection, "550 No such user here")
+        return True
 
     if (cmd == "NOOP"):
         send(connection, "250 OK")
         return True
 
     if(not receivingMail):
+        send(connection, "500 unknown command")
         return True
 
     if("RCPT TO:" in cmd):
