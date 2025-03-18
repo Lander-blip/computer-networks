@@ -62,13 +62,16 @@ class MailClient:
         #self._receiveSMTP()  # Read server greeting
 
         # Send HELO command
+        
         self._sendSMTP("HELO " + self.server_ip + "\n")
         self._receiveSMTP()
 
         # Send MAIL FROM command
-        mail_from = input("From: ")
-        self._sendSMTP(f"MAIL FROM: <{mail_from}>\n")
-        self._receiveSMTP()
+        response = "501"
+        while "501" in response:
+            mail_from = input("From: ")
+            self._sendSMTP(f"MAIL FROM: <{mail_from}>\n")
+            response = self._receiveSMTP()
 
         # Send RCPT TO command (repeat until no error)
         response = "550"
