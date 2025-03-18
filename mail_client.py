@@ -8,7 +8,7 @@ class MailClient:
         self.server_ip = server_ip
         self.smtp_socket = None
         self.pop3_socket = None
-        self.SMTP_PORT = 2001  # Specified SMTP port
+        self.SMTP_PORT = 2000  # Specified SMTP port
         self.POP3_PORT = 3000  # Specified POP3 port
         self.connectSMTP()
 
@@ -303,3 +303,48 @@ if __name__ == "__main__":
     server_ip = args.adress
     client = MailClient(server_ip)
     client.start()
+
+# =======================
+# Sample Input and Output
+# =======================
+
+# User is presented with options
+# Output:
+# Options:
+# 1. Send Email
+# 2. Manage Emails
+# 3. Search Emails
+# 4. Exit
+# Choose an option:
+
+# User selects option 1 (Send Email)
+# Input:
+# 1
+
+# User enters email details
+# Input:
+# From: jeff@email.com
+# To: lander@email.com
+# Subject: My hobbies
+
+# Program prompts for message body
+# Output:
+# Enter message body, end with a line containing only '.': 
+
+# User enters the message body
+# Input:
+# My favorite hobbies are drawing and working on school projects.
+# .
+
+# Program confirms email completion
+# Output:
+# EMAIL COMPLETE
+
+# Program presents options again
+# Output:
+# Options:
+# 1. Send Email
+# 2. Manage Emails
+# 3. Search Emails
+# 4. Exit
+# Choose an option:
