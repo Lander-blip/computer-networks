@@ -65,6 +65,11 @@ class Mail:
 
 def send(connection, msg):
     connection.sendall(msg.encode())
+    print("Server:", msg)
+
+def log(msg):
+    print("Client:", msg)
+
 
 def writeMailOnDisk(mail):
     for rcpt in mail.rcpts:
@@ -78,9 +83,10 @@ def writeMailOnDisk(mail):
 def handleCommand(connection, data):  # returns False when connection needs to be closed
     global receivingMail
     cmd = data.replace('\n', "").replace("\r", "")
-    if (cmd == "HELO"):
-        print("Sending HELO back")
-        send(connection, "250 OK")
+    if ("HELO " in cmd):
+        #print("Sending HELO back")
+        host = cmd[len("HELO "):]
+        send(connection, f"250 OK Hello {host}")
         return True
 
     if ("MAIL FROM: <" in cmd):
@@ -94,13 +100,13 @@ def handleCommand(connection, data):  # returns False when connection needs to b
             return True
 
     if (cmd == "RSET"):
-        print("resetting current received mail")
+        #print("resetting current received mail")
         send(connection, "200 Mail resetted")
         receivingMail = None
         return True
 
     if (cmd == "QUIT"):
-        print("Quiting... ")
+        #print("Quiting... ")
         send(connection, "GOODBYE")
         return False
 
@@ -138,16 +144,16 @@ def handleCommand(connection, data):  # returns False when connection needs to b
 
     if(receivingMail.receivedDataCMD):  # add received data to the body of the mail
         if(receivingMail.appendToBody(data)):
-            print("RECEIVED MAIL, READY TO SAVE MAIL!")
+            #print("RECEIVED MAIL, READY TO SAVE MAIL!")
             send(connection, "250 OK, message accepted for delivery")
             writeMailOnDisk(receivingMail)
             receivingMail = None
         else:
             send(connection, "200 OK, received correctly")
 
-    print("CURRENT RECEIVED EMAIL:")
-    print(receivingMail)
-    print("------------------------------")
+    #print("CURRENT RECEIVED EMAIL:")
+    #print(receivingMail)
+    #print("------------------------------")
     return True
 
 def client_thread(connection, client_address):
@@ -156,7 +162,7 @@ def client_thread(connection, client_address):
         while run:
             data = connection.recv(1024)
             if data:
-                print("Received data:", repr(data.decode()))
+                print("Client:", repr(data.decode()))
                 run = handleCommand(connection, data.decode())
             else:
                 print("No data received. Closing connection.")

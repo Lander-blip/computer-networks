@@ -9,7 +9,7 @@ class MailClient:
         self.smtp_socket = None
         self.pop3_socket = None
         self.SMTP_PORT = 2000  # Specified SMTP port
-        self.POP3_PORT = 3001  # Specified POP3 port
+        self.POP3_PORT = 3000  # Specified POP3 port
         self.connectSMTP()
 
     def connectSMTP(self):
@@ -100,10 +100,6 @@ class MailClient:
 
         # End DATA with termination sequence
         self._sendSMTP("\n.\n")
-        self._receiveSMTP()
-
-        # Optionally, send QUIT (or keep connection open for further emails)
-        self._sendSMTP("QUIT\n")
         self._receiveSMTP()
 
     # --------------------------
@@ -292,6 +288,10 @@ class MailClient:
                 self.search_emails()
             elif choice == '4':
                 print("Exiting.")
+                if self.smtp_socket:
+                    self._sendSMTP("QUIT\n")
+                if self.pop3_socket:
+                    self._sendPOP("QUIT\n")
                 break
             else:
                 print("Invalid choice.")
