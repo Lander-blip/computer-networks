@@ -99,12 +99,12 @@ class MailClient:
                 break
 
         # End DATA with termination sequence
-        self._sendSMTP("\n.\n")
-        self._receiveSMTP()
+        # self._sendSMTP("\n.\n")
+        # self._receiveSMTP()
 
         # Optionally, send QUIT (or keep connection open for further emails)
-        self._sendSMTP("QUIT\n")
-        self._receiveSMTP()
+        # self._sendSMTP("QUIT\n")
+        # self._receiveSMTP()
 
     # --------------------------
     # Managing Emails (POP3)
