@@ -1,6 +1,7 @@
 import argparse
 import socket
 import os
+import threading
 
 users = [("lander", "lander@email.com"), ("robbe", "robbe@email.com")]
 receivingMail = None
@@ -19,7 +20,6 @@ class Mail:
         msg = "From: " + self.sender + '\n'
         msg += "To: " + str(self.rcpts) + '\n'
         msg += "Subject: " + self.subject + '\n'
-        # msg += "Received" + self.time + '\n'
         msg += self.body + '\n'
         return msg
 
@@ -41,7 +41,7 @@ class Mail:
         return msg
 
     def addRcpt(self, rcpt):
-        if (rcpt in self.rcpts or self.receivedDataCMD): #cant add rcpts when starting to receive the body
+        if (rcpt in self.rcpts or self.receivedDataCMD): # can't add rcpts when starting to receive the body
             return
         self.rcpts.append(rcpt)
 
@@ -52,7 +52,7 @@ class Mail:
         self.body += msg
 
         chunks = msg.split('\n')
-        #filter metadata
+        # filter metadata
         for chunk in chunks:
             if "Subject: " in chunk:
                 self.subject = chunk[len("Subject: "):]
@@ -62,7 +62,6 @@ class Mail:
             self.body = self.body[:-3]
             return True
         return False
-
 
 def send(connection, msg):
     connection.sendall(msg.encode())
@@ -76,7 +75,7 @@ def writeMailOnDisk(mail):
         else:
             print(f"ERROR: directory {name} not found")
 
-def handleCommand(connection, data): #returns False when connection needs to be closed
+def handleCommand(connection, data):  # returns False when connection needs to be closed
     global receivingMail
     cmd = data.replace('\n', "").replace("\r", "")
     if (cmd == "HELO"):
@@ -85,8 +84,8 @@ def handleCommand(connection, data): #returns False when connection needs to be 
         return True
 
     if ("MAIL FROM: <" in cmd):
-        mail = cmd[len("MAIL FROM: <"):-1] #filter out
-        if("@" in mail): #correct email
+        mail = cmd[len("MAIL FROM: <"):-1]  # filter out
+        if("@" in mail):  # correct email
             send(connection, "250 OK")
             receivingMail = Mail(mail)
             return True
@@ -105,7 +104,7 @@ def handleCommand(connection, data): #returns False when connection needs to be 
         send(connection, "GOODBYE")
         return False
 
-    if ("VRFY " in cmd): #only works to check for emails in maillist
+    if ("VRFY " in cmd):  # only works to check for emails in mail list
         user = cmd[len("VRFY "):]
         for i in range(len(users)):
             if(user == users[i][0] or user == users[i][1]):
@@ -125,7 +124,7 @@ def handleCommand(connection, data): #returns False when connection needs to be 
         return True
 
     if("RCPT TO: <" in cmd):
-        mail = cmd[len("RCPT TO: <"):-1] #filter out last >
+        mail = cmd[len("RCPT TO: <"):-1]  # filter out last >
         if mail in [user[1] for user in users]:
             receivingMail.addRcpt(mail)
             send(connection, "250 OK")
@@ -137,7 +136,7 @@ def handleCommand(connection, data): #returns False when connection needs to be 
         send(connection, "354 Start mail input; end with <CRLF>.<CRLF>")
         return True
 
-    if(receivingMail.receivedDataCMD): #add received data to the body of the mail
+    if(receivingMail.receivedDataCMD):  # add received data to the body of the mail
         if(receivingMail.appendToBody(data)):
             print("RECEIVED MAIL, READY TO SAVE MAIL!")
             send(connection, "250 OK, message accepted for delivery")
@@ -145,38 +144,14 @@ def handleCommand(connection, data): #returns False when connection needs to be 
             receivingMail = None
         else:
             send(connection, "200 OK, received correctly")
-            #write message in correct subfolder
 
     print("CURRENT RECEIVED EMAIL:")
     print(receivingMail)
     print("------------------------------")
     return True
 
-
-def main():
-    parser = argparse.ArgumentParser(description="Start a TCP server that listens for connections on a specified port.")
-    parser.add_argument('port', type=int, help='An integer for the port number')
-    args = parser.parse_args()
-
-    # Create a socket object using TCP / IP
-    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-    # Bind the socket to the server address and port number
-    server_address = ('localhost', args.port)
-    print(f"Starting up on {server_address[0]} port {server_address[1]}")
-    server_socket.bind(server_address)
-
-    # Listen for incoming connections (server mode)
-    server_socket.listen(1)
-    print("Waiting for a connection...")
-
+def client_thread(connection, client_address):
     try:
-        # Wait for a connection
-        connection, client_address = server_socket.accept()
-        print(f"Connection from {client_address} has been established.")
-        connection.sendall("HELLO WORLD".encode())
-        
-        # The following loop will echo back any received data to the client
         run = True
         while run:
             data = connection.recv(1024)
@@ -187,8 +162,31 @@ def main():
                 print("No data received. Closing connection.")
                 break
     finally:
-        # Clean up the connection
         connection.close()
+        print(f"Connection with {client_address} closed.")
+
+def main():
+    parser = argparse.ArgumentParser(description="Start a TCP server that listens for connections on a specified port.")
+    parser.add_argument('port', type=int, help='An integer for the port number')
+    args = parser.parse_args()
+
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_address = ('localhost', args.port)
+    print(f"Starting up on {server_address[0]} port {server_address[1]}")
+    server_socket.bind(server_address)
+
+    server_socket.listen(5)
+    print("Waiting for connections...")
+
+    try:
+        while True:
+            connection, client_address = server_socket.accept()
+            print(f"Connection from {client_address} has been established.")
+            # Start a new thread to handle this connection
+            threading.Thread(target=client_thread, args=(connection, client_address)).start()
+    finally:
+        server_socket.close()
 
 if __name__ == '__main__':
+    import threading
     main()

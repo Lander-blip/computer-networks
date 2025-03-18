@@ -59,7 +59,7 @@ class MailClient:
     # --------------------------
     def send_email(self):
         # SMTP interaction
-        self._receiveSMTP()  # Read server greeting
+        #self._receiveSMTP()  # Read server greeting
 
         # Send HELO command
         self._sendSMTP("HELO " + self.server_ip + "\n")
