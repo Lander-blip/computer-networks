@@ -94,7 +94,7 @@ def handle_stat(mailbox, deletion_marks):
     """
     num = sum(1 for mark in deletion_marks if not mark)
     total_size = sum(len(msg.encode()) for i, msg in enumerate(mailbox) if not deletion_marks[i])
-    return f"+OK {num} {total_size}\r\n"
+    return f"+OK {num} {total_size}\n"
 
 def handle_list(mailbox, deletion_marks):
     """
@@ -108,7 +108,7 @@ def handle_list(mailbox, deletion_marks):
         if not deletion_marks[i]:
             sender, received, subject = parse_mail_fields(msg)
             lines.append(f"{i+1}. {sender} {received} {subject}")
-    response = f"+OK {len(lines)} messages\r\n" + "\r\n".join(lines) + "\r\n.\r\n"
+    response = f"+OK {len(lines)} messages\n" + "\n".join(lines) + "\n.\n"
     return response
 
 def handle_retr(mailbox, deletion_marks, msg_num):
@@ -118,9 +118,9 @@ def handle_retr(mailbox, deletion_marks, msg_num):
     """
     index = msg_num - 1
     if index < 0 or index >= len(mailbox) or deletion_marks[index]:
-        return "-ERR no such message\r\n"
+        return "-ERR no such message\n"
     msg = mailbox[index]
-    return f"+OK message follows\r\n{msg}\r\n.\r\n"
+    return f"+OK message follows\n{msg}\n.\n"
 
 def handle_dele(deletion_marks, msg_num):
     """
@@ -128,9 +128,9 @@ def handle_dele(deletion_marks, msg_num):
     """
     index = msg_num - 1
     if index < 0 or index >= len(deletion_marks) or deletion_marks[index]:
-        return "-ERR no such message\r\n"
+        return "-ERR no such message\n"
     deletion_marks[index] = True
-    return f"+OK message {msg_num} marked for deletion\r\n"
+    return f"+OK message {msg_num} marked for deletion\n"
 
 def handle_rset(deletion_marks):
     """
@@ -138,7 +138,7 @@ def handle_rset(deletion_marks):
     """
     for i in range(len(deletion_marks)):
         deletion_marks[i] = False
-    return "+OK maildrop has been reset\r\n"
+    return "+OK maildrop has been reset\n"
 
 # ---------------------------
 # Main POP3 Server Functionality
@@ -147,7 +147,7 @@ def handle_client(connection, client_address, users):
     print(f"Connection from {client_address} established.")
     try:
         # Send initial greeting.
-        connection.sendall(b"+OK POP3 server ready\r\n")
+        connection.sendall(b"+OK POP3 server ready\n")
         authenticated = False
         current_user = None
         mailbox = []
@@ -157,12 +157,12 @@ def handle_client(connection, client_address, users):
             data = connection.recv(1024).decode()
             if not data:
                 break
-            # Filter out all \r and \n characters
-            data = data.replace('\r', '').replace('\n', '')
+            # Filter out all  and \n characters
+            data = data.replace('', '').replace('\n', '')
             print("Received command:", repr(data))
             parts = data.split()
             if not parts:
-                connection.sendall(b"-ERR empty command\r\n")
+                connection.sendall(b"-ERR empty command\n")
                 continue
 
             command = parts[0].upper()
@@ -172,7 +172,7 @@ def handle_client(connection, client_address, users):
             if not authenticated:
                 if command == "USER" and args:
                     current_user = args[0]
-                    connection.sendall(b"+OK User name accepted, password please\r\n")
+                    connection.sendall(b"+OK User name accepted, password please\n")
                 elif command == "PASS" and args and current_user:
                     password = args[0]
                     if current_user in users and users[current_user] == password:
@@ -180,11 +180,11 @@ def handle_client(connection, client_address, users):
                         mailbox = load_mailbox(current_user)
                         deletion_marks = [False] * len(mailbox)
                         print("Authentication successful")
-                        connection.sendall(b"+OK POP3 server is ready\r\n")
+                        connection.sendall(b"+OK POP3 server is ready\n")
                     else:
-                        connection.sendall(b"-ERR Invalid password\r\n")
+                        connection.sendall(b"-ERR Invalid password\n")
                 else:
-                    connection.sendall(b"-ERR Authentication required\r\n")
+                    connection.sendall(b"-ERR Authentication required\n")
             # --- Authenticated Commands ---
             else:
                 if command == "STAT":
@@ -201,9 +201,9 @@ def handle_client(connection, client_address, users):
                             response = handle_retr(mailbox, deletion_marks, msg_num)
                             connection.sendall(response.encode())
                         except ValueError:
-                            connection.sendall(b"-ERR Invalid message number\r\n")
+                            connection.sendall(b"-ERR Invalid message number\n")
                     else:
-                        connection.sendall(b"-ERR RETR requires a message number\r\n")
+                        connection.sendall(b"-ERR RETR requires a message number\n")
                 elif command == "DELE":
                     if args:
                         try:
@@ -211,9 +211,9 @@ def handle_client(connection, client_address, users):
                             response = handle_dele(deletion_marks, msg_num)
                             connection.sendall(response.encode())
                         except ValueError:
-                            connection.sendall(b"-ERR Invalid message number\r\n")
+                            connection.sendall(b"-ERR Invalid message number\n")
                     else:
-                        connection.sendall(b"-ERR DELE requires a message number\r\n")
+                        connection.sendall(b"-ERR DELE requires a message number\n")
                 elif command == "RSET":
                     response = handle_rset(deletion_marks)
                     connection.sendall(response.encode())
@@ -222,12 +222,12 @@ def handle_client(connection, client_address, users):
                     new_mailbox = [msg for i, msg in enumerate(mailbox) if not deletion_marks[i]]
                     try:
                         save_mailbox(current_user, new_mailbox)
-                        connection.sendall(b"+OK POP3 server signing off\r\n")
+                        connection.sendall(b"+OK POP3 server signing off\n")
                     except Exception as e:
-                        connection.sendall(f"-ERR {str(e)}\r\n".encode())
+                        connection.sendall(f"-ERR {str(e)}\n".encode())
                     break
                 else:
-                    connection.sendall(b"-ERR Command not recognized\r\n")
+                    connection.sendall(b"-ERR Command not recognized\n")
     finally:
         connection.close()
         print(f"Connection with {client_address} closed.")

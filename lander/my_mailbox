@@ -1,19 +1,12 @@
-From: test@test.com
+From: liam@mail.com
 To: lander@email.com
-Subject: Test mail
-Received: 2025-03-07 : 15 : 11
-Hello this is a test mail.
+Subject: TEST1
+Received: 03/18/2025 : 10 : 59
+Dit is je eerste mail ooit.
 
-From: test@test.com
+From: robbe@mail.com
 To: lander@email.com
-Subject: Test mail
-Received: 2025-03-07 : 15 : 31
-Hello this is a test mail.
-
-From: test@test.com
-To: lander@email.com
-Subject: Test mail
-Received: 2025-03-07 : 15 : 42
-Hello this is a test mail.
-RSET
+Subject: TEST2
+Received: 03/18/2025 : 11 : 01
+Dit je tweede mail ooit.
 
